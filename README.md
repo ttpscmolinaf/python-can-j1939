@@ -1,92 +1,243 @@
-# j1939-lib
+Fork from TTPSC: SAE J1939 for Python
+====================
+
+|release| |docs|
+
+.. |release| image:: https://img.shields.io/pypi/v/can-j1939
+   :target: https://pypi.python.org/pypi/can-j1939/
+   :alt: Latest Version on PyPi
+
+.. |docs| image:: https://readthedocs.org/projects/j1939/badge/?version=latest
+   :target: https://j1939.readthedocs.io/en/latest/
+   :alt: Documentation build Status
+
+Overview
+--------
+
+This is a fork of the https://github.com/juergenH87/python-can-j1939 project, it essentially adds the possibility to get the origin of the message.
+For more information please check the readme file in the author's project.
+
+Installation
+------------
+
+Install can-j1939 with pip::
+
+    $ pip install can-j1939-ttpsc
+
+or do the trick with::
+
+    $ git clone https://github.com/ttpscmolinaf/python-can-j1939
+    $ cd j1939
+    $ pip install .
+
+Upgrade
+------------
+
+Upgrade an already installed can-j1939 package::
+
+    $ pip install --upgrade can-j1939
+
+
+Quick start
+-----------
+
+To simply receive all passing (public) messages on the bus you can subscribe to the ECU object.
+
+.. code-block:: python
+
+    import logging
+    import time
+    import can
+    import j1939
+
+    logging.getLogger('j1939').setLevel(logging.DEBUG)
+    logging.getLogger('can').setLevel(logging.DEBUG)
+
+    def on_message(priority, pgn, sa, timestamp, data):
+        """Receive incoming messages from the bus
+
+        :param int priority:
+            Priority of the message
+        :param int pgn:
+            Parameter Group Number of the message
+        :param int sa:
+            Source Address of the message
+        :param int timestamp:
+            Timestamp of the message
+        :param bytearray data:
+            Data of the PDU
+        """
+        print("PGN {} length {}".format(pgn, len(data)))
+
+    def main():
+        print("Initializing")
+
+        # create the ElectronicControlUnit (one ECU can hold multiple ControllerApplications)
+        ecu = j1939.ElectronicControlUnit()
+
+        # Connect to the CAN bus
+        # Arguments are passed to python-can's can.interface.Bus() constructor
+        # (see https://python-can.readthedocs.io/en/stable/bus.html).
+        # ecu.connect(bustype='socketcan', channel='can0')
+        # ecu.connect(bustype='kvaser', channel=0, bitrate=250000)
+        ecu.connect(bustype='pcan', channel='PCAN_USBBUS1', bitrate=250000)
+        # ecu.connect(bustype='ixxat', channel=0, bitrate=250000)
+        # ecu.connect(bustype='vector', app_name='CANalyzer', channel=0, bitrate=250000)
+        # ecu.connect(bustype='nican', channel='CAN0', bitrate=250000)
+
+        # subscribe to all (global) messages on the bus
+        ecu.subscribe(on_message)
+
+        time.sleep(120)
+
+        print("Deinitializing")
+        ecu.disconnect()
+
+    if __name__ == '__main__':
+        main()
+
+A more sophisticated example in which the CA class was overloaded to include its own functionality:
+
+.. code-block:: python
+
+    import logging
+    import time
+    import can
+    import j1939
+
+    logging.getLogger('j1939').setLevel(logging.DEBUG)
+    logging.getLogger('can').setLevel(logging.DEBUG)
+
+    # compose the name descriptor for the new ca
+    name = j1939.Name(
+        arbitrary_address_capable=0,
+        industry_group=j1939.Name.IndustryGroup.Industrial,
+        vehicle_system_instance=1,
+        vehicle_system=1,
+        function=1,
+        function_instance=1,
+        ecu_instance=1,
+        manufacturer_code=666,
+        identity_number=1234567
+        )
+
+    # create the ControllerApplications
+    ca = j1939.ControllerApplication(name, 128)
+
+
+    def ca_receive(priority, pgn, source, timestamp, data):
+        """Feed incoming message to this CA.
+        (OVERLOADED function)
+        :param int priority:
+            Priority of the message
+        :param int pgn:
+            Parameter Group Number of the message
+        :param intsa:
+            Source Address of the message
+        :param int timestamp:
+            Timestamp of the message
+        :param bytearray data:
+            Data of the PDU
+        """
+        print("PGN {} length {}".format(pgn, len(data)))
+
+    def ca_timer_callback1(cookie):
+        """Callback for sending messages
+
+        This callback is registered at the ECU timer event mechanism to be
+        executed every 500ms.
+
+        :param cookie:
+            A cookie registered at 'add_timer'. May be None.
+        """
+        # wait until we have our device_address
+        if ca.state != j1939.ControllerApplication.State.NORMAL:
+            # returning true keeps the timer event active
+            return True
+
+        # create data with 8 bytes
+        data = [j1939.ControllerApplication.FieldValue.NOT_AVAILABLE_8] * 8
+
+        # sending normal broadcast message
+        ca.send_pgn(0, 0xFD, 0xED, 6, data)
+
+        # sending normal peer-to-peer message, destintion address is 0x04
+        ca.send_pgn(0, 0xE0, 0x04, 6, data)
+
+        # returning true keeps the timer event active
+        return True
+
+
+    def ca_timer_callback2(cookie):
+        """Callback for sending messages
+
+        This callback is registered at the ECU timer event mechanism to be
+        executed every 500ms.
+
+        :param cookie:
+            A cookie registered at 'add_timer'. May be None.
+        """
+        # wait until we have our device_address
+        if ca.state != j1939.ControllerApplication.State.NORMAL:
+            # returning true keeps the timer event active
+            return True
+
+        # create data with 100 bytes
+        data = [j1939.ControllerApplication.FieldValue.NOT_AVAILABLE_8] * 100
+
+        # sending multipacket message with TP-BAM
+        ca.send_pgn(0, 0xFE, 0xF6, 6, data)
+
+        # sending multipacket message with TP-CMDT, destination address is 0x05
+        ca.send_pgn(0, 0xD0, 0x05, 6, data)
+
+        # returning true keeps the timer event active
+        return True
+
+    def main():
+        print("Initializing")
+
+        # create the ElectronicControlUnit (one ECU can hold multiple ControllerApplications)
+        ecu = j1939.ElectronicControlUnit()
+
+        # Connect to the CAN bus
+        # Arguments are passed to python-can's can.interface.Bus() constructor
+        # (see https://python-can.readthedocs.io/en/stable/bus.html).
+        # ecu.connect(bustype='socketcan', channel='can0')
+        # ecu.connect(bustype='kvaser', channel=0, bitrate=250000)
+        ecu.connect(bustype='pcan', channel='PCAN_USBBUS1', bitrate=250000)
+        # ecu.connect(bustype='ixxat', channel=0, bitrate=250000)
+        # ecu.connect(bustype='vector', app_name='CANalyzer', channel=0, bitrate=250000)
+        # ecu.connect(bustype='nican', channel='CAN0', bitrate=250000)
+        # ecu.connect('testchannel_1', bustype='virtual')
+
+        # add CA to the ECU
+        ecu.add_ca(controller_application=ca)
+        ca.subscribe(ca_receive)
+        # callback every 0.5s
+        ca.add_timer(0.500, ca_timer_callback1)
+        # callback every 5s
+        ca.add_timer(5, ca_timer_callback2)
+        # by starting the CA it starts the address claiming procedure on the bus
+        ca.start()
+
+        time.sleep(120)
+
+        print("Deinitializing")
+        ca.stop()
+        ecu.disconnect()
+
+    if __name__ == '__main__':
+        main()
+
+
+Credits
+-------
+This implementation was taken from https://github.com/juergenH87/python-can-j1939, as we needed to get information of the bus for the message that was received by the library.
+
+Thanks for your great work!
 
 
 
-## Getting started
-
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
-
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
-
-## Add your files
-
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
-
-```
-cd existing_repo
-git remote add origin https://gitlab.ttpsc.com/solaris/j1939-lib.git
-git branch -M main
-git push -uf origin main
-```
-
-## Integrate with your tools
-
-- [ ] [Set up project integrations](https://gitlab.ttpsc.com/solaris/j1939-lib/-/settings/integrations)
-
-## Collaborate with your team
-
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
-
-## Test and Deploy
-
-Use the built-in continuous integration in GitLab.
-
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing(SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
-
-***
-
-# Editing this README
-
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thank you to [makeareadme.com](https://www.makeareadme.com/) for this template.
-
-## Suggestions for a good README
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
-
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
-
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
-
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
-
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
-
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
-
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+.. _python-can: https://python-can.readthedocs.org/en/stable/
+.. _Copperhill technologies: http://copperhilltech.com/a-brief-introduction-to-the-sae-j1939-protocol/
