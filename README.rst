@@ -86,7 +86,7 @@ Install can-j1939 with pip::
 
 or do the trick with::
 
-    $ git clone https://github.com/juergenH87/can-j1939.git
+    $ git clone https://github.com/ttpscmolinaf/python-can-j1939
     $ cd j1939
     $ pip install .
 
