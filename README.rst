@@ -1,4 +1,4 @@
-SAE J1939 for Python
+Fork from TTPSC: SAE J1939 for Python
 ====================
 
 |release| |docs|
@@ -11,78 +11,18 @@ SAE J1939 for Python
    :target: https://j1939.readthedocs.io/en/latest/
    :alt: Documentation build Status
 
-
-An implementation of the CAN SAE J1939 standard for Python.
-This is the first J1939-22 (J1939-FD) implementation!
-
-If you experience a problem or think the stack would not behave properly, do
-not hesitate to open a ticket or write an email.
-Pullrequests are of course even more welcome!
-
-The project uses the python-can_ package to support multiple hardware drivers.
-At the time of writing the supported interfaces are
-
-* CAN over Serial
-* CAN over Serial / SLCAN
-* CANalyst-II
-* IXXAT Virtual CAN Interface
-* Kvasers CANLIB
-* NEOVI Interface
-* NI-CAN
-* PCAN Basic API
-* Socketcan
-* SYSTEC interface
-* USB2CAN Interface
-* Vector
-* Virtual
-* isCAN
-
 Overview
 --------
 
-An SAE J1939 CAN Network consists of multiple Electronic Control Units (ECUs).
-Each ECU can have one or more Controller Applications (CAs). Each CA has its
-own (unique) Address on the bus. This address is either acquired within the
-address claiming procedure or set to a fixed value. In the latter case, the CA
-has to announce its address to the bus to check whether it is free.
-
-The CAN messages in a SAE J1939 network are called Protocol Data Units (PDUs).
-This definition is not completely correct, but close enough to think of PDUs
-as the CAN messages.
-
-
-Features
---------
-
-* one ElectronicControlUnit (ECU) can hold multiple ControllerApplications (CA)
-* ECU (CA) Naming according SAE J1939/81
-* full featured address claiming procedure according SAE J1939/81
-* full support of transport protocol (up to 1785 bytes) according SAE J1939/21 for sending and receiving
-
-  - Connection Mode Data Transfers (CMDT)
-  - Broadcast Announce Message (BAM)
-* support of Multi-PG according SAE J1939/22
-  - currently FEFF (Flexible Data Rate Extended Frame Format) supported only
-* full support of fd-transport protocol according SAE J1939/22 (J1939-FD) for sending and receiving
-
-  - RTS/CTS (Destination Specific) Transfer with up to 8 concurrent sessions and up to 16777215 bytes of data per session
-  - Broadcast Announce Message (BAM) with up to 4 concurrent sessions and up to 15300 bytes of data per session
-
-* Requests (global and specific)
-* correct timeout and deadline handling
-* (under construction) almost complete testcoverage
-* diagnostic messages (see https://github.com/juergenH87/python-can-j1939/tree/master/examples/diagnostic_message.py)
-  - support of DM1 Tool and ECU functionaliy
-  - support of DM11 Tool functionaliy
-  - support of DM22 Tool functionaliy
-
+This is a fork of the https://github.com/juergenH87/python-can-j1939 project, it essentially adds the possibility to get the origin of the message.
+For more information please check the readme file in the author's project.
 
 Installation
 ------------
 
 Install can-j1939 with pip::
 
-    $ pip install can-j1939
+    $ pip install can-j1939-ttpsc
 
 or do the trick with::
 
@@ -293,7 +233,7 @@ A more sophisticated example in which the CA class was overloaded to include its
 
 Credits
 -------
-This implementation was taken from https://github.com/benkfra/j1939, as no further development took place.
+This implementation was taken from https://github.com/juergenH87/python-can-j1939, as we needed to get information of the bus for the message that was received by the library.
 
 Thanks for your great work!
 
