@@ -1,11 +1,7 @@
 Fork from TTPSC: SAE J1939 for Python
-====================
+=====================================
 
-|release| |docs|
-
-.. |release| image:: https://img.shields.io/pypi/v/can-j1939
-   :target: https://pypi.python.org/pypi/can-j1939/
-   :alt: Latest Version on PyPi
+|docs|
 
 .. |docs| image:: https://readthedocs.org/projects/j1939/badge/?version=latest
    :target: https://j1939.readthedocs.io/en/latest/
@@ -235,7 +231,7 @@ Credits
 -------
 This implementation was taken from https://github.com/juergenH87/python-can-j1939, as we needed to get information of the bus for the message that was received by the library.
 
-Thanks for your great work!
+Thanks for your great work Juergen :)!
 
 
 
