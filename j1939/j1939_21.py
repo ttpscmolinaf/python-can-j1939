@@ -712,75 +712,20 @@ class J1939_21:
         mid = MessageId(can_id=can_id)
         pgn = ParameterGroupNumber()
         pgn.from_message_id(mid)
-
-        if pgn.is_pdu2_format:
-            # direct broadcast
-            """
-            As of commit https://github.com/juergenH87/python-can-j1939/commit/739c1c0baf24c07cdf32e96289595954200782b9
-            It was added the channel parameter for the notifier.
-            """
-            # Added channel param
-            self.__notify_subscribers(
-                mid.priority,
-                pgn.value,
-                mid.source_address,
-                ParameterGroupNumber.Address.GLOBAL,
-                timestamp,
-                data,
-                channel,
-            )
-            return
-
-        # peer to peer
-        # pdu_specific is destination Address
-        pgn_value = pgn.value & 0x1FF00
-        dest_address = pgn.pdu_specific  # may be Address.GLOBAL
-
-        # iterate all CAs to check if we have to handle this destination address
-        if dest_address != ParameterGroupNumber.Address.GLOBAL:
-            if not self.__ecu_is_message_acceptable(
-                dest_address
-            ):  # simple peer-to-peer reception without adding a controller-application
-                reject = True
-                for ca in self._cas:
-                    if ca.message_acceptable(dest_address):
-                        reject = False
-                        break
-                if reject == True:
-                    return
-
-        if pgn_value == ParameterGroupNumber.PGN.ADDRESSCLAIM:
-            for ca in self._cas:
-                ca._process_addressclaim(mid, data, timestamp)
-        elif pgn_value == ParameterGroupNumber.PGN.REQUEST:
-            for ca in self._cas:
-                if ca.message_acceptable(dest_address):
-                    ca._process_request(mid, dest_address, data, timestamp)
-        elif pgn_value == ParameterGroupNumber.PGN.TP_CM:
-            """
-            As of commit https://github.com/juergenH87/python-can-j1939/commit/739c1c0baf24c07cdf32e96289595954200782b9
-            It was added the channel parameter for the notifier.
-            """
-            self._process_tp_cm(mid, dest_address, data, timestamp, channel)
-        elif pgn_value == ParameterGroupNumber.PGN.DATATRANSFER:
-            """
-            As of commit https://github.com/juergenH87/python-can-j1939/commit/739c1c0baf24c07cdf32e96289595954200782b9
-            It was added the channel parameter for the notifier.
-            """
-            self._process_tp_dt(mid, dest_address, data, timestamp, channel)
-        else:
-            """
-            As of commit https://github.com/juergenH87/python-can-j1939/commit/739c1c0baf24c07cdf32e96289595954200782b9
-            It was added the channel parameter for the notifier.
-            """
-            # Added channel param
-            self.__notify_subscribers(
-                mid.priority,
-                pgn_value,
-                mid.source_address,
-                dest_address,
-                timestamp,
-                data,
-                channel,
-            )
-            return
+        # Direct broadcast
+        # Removed peer to peer logic, we are interested in sniffing only.
+        """
+        As of commit https://github.com/juergenH87/python-can-j1939/commit/739c1c0baf24c07cdf32e96289595954200782b9
+        It was added the channel parameter for the notifier.
+        """
+        # Added channel param
+        self.__notify_subscribers(
+            mid.priority,
+            pgn.value,
+            mid.source_address,
+            ParameterGroupNumber.Address.GLOBAL,
+            timestamp,
+            data,
+            channel,
+        )
+        return

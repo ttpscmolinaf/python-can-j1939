@@ -1194,63 +1194,14 @@ class J1939_22:
         pgn = ParameterGroupNumber()
         pgn.from_message_id(mid)
 
-        # peer to peer
-        # pdu_specific is destination Address
-        pgn_value = pgn.value & 0x1FF00
-        dest_address = pgn.pdu_specific  # may be Address.GLOBAL
-
-        # iterate all CAs to check if we have to handle this destination address
-        if dest_address != ParameterGroupNumber.Address.GLOBAL:
-            if not self.__ecu_is_message_acceptable(
-                dest_address
-            ):  # simple peer-to-peer reception without adding a controller-application
-                reject = True
-                for ca in self._cas:
-                    if ca.message_acceptable(dest_address):
-                        reject = False
-                        break
-                if reject == True:
-                    return
-
-        if pgn_value == ParameterGroupNumber.PGN.FEFF_MULTI_PG:
-            self._process_multi_pg(mid, dest_address, data, timestamp)
-        elif pgn_value == ParameterGroupNumber.PGN.ADDRESSCLAIM:
-            for ca in self._cas:
-                ca._process_addressclaim(mid, data, timestamp)
-        elif pgn_value == ParameterGroupNumber.PGN.REQUEST:
-            for ca in self._cas:
-                if ca.message_acceptable(dest_address):
-                    ca._process_request(mid, dest_address, data, timestamp)
-        elif pgn_value == ParameterGroupNumber.PGN.FD_TP_CM:
-            self._process_tp_cm(mid, dest_address, data, timestamp)
-        elif pgn_value == ParameterGroupNumber.PGN.FD_TP_DT:
-            self._process_tp_dt(mid, dest_address, data, timestamp)
-        elif pgn_value == ParameterGroupNumber.PGN.TP_CM:
-            logger.info(
-                "j1939-21 transport protocol cm not allowed in j1939-22 network"
-            )
-        elif pgn_value == ParameterGroupNumber.PGN.DATATRANSFER:
-            logger.info(
-                "j1939-21 transport protocol dt not allowed in j1939-22 network"
-            )
-        elif pgn.is_pdu2_format:
-            # direct broadcast
-            self.__notify_subscribers(
-                mid.priority,
-                pgn.value,
-                mid.source_address,
-                ParameterGroupNumber.Address.GLOBAL,
-                timestamp,
-                data,
-                channel,
-            )
-        else:
-            self.__notify_subscribers(
-                mid.priority,
-                pgn_value,
-                mid.source_address,
-                dest_address,
-                timestamp,
-                data,
-                channel,
-            )
+        # Direct broadcast
+        # Removed peer to peer logic, we are interested in sniffing only
+        self.__notify_subscribers(
+            mid.priority,
+            pgn.value,
+            mid.source_address,
+            ParameterGroupNumber.Address.GLOBAL,
+            timestamp,
+            data,
+            channel,
+        )
