@@ -369,6 +369,7 @@ class J1939_21:
                 "deadline": time.time() + self.Timeout.T2,
                 "src_address": src_address,
                 "dest_address": dest_address,
+                "received_parts": [],
             }
 
             self.__send_tp_cts(
@@ -454,6 +455,7 @@ class J1939_21:
                 "deadline": time.time() + self.Timeout.T1,
                 "src_address": src_address,
                 "dest_address": dest_address,
+                "received_parts": [],
             }
             self.__job_thread_wakeup()
         elif control_byte == self.ConnectionMode.ABORT:
@@ -485,8 +487,10 @@ class J1939_21:
             # TODO: LOG/TRACE/EXCEPTION?
             return
 
-        # get data
-        self._rcv_buffer[buffer_hash]["data"].extend(data[1:])
+        # get data - added resiliency for duplicated messages
+        if sequence_number not in self._rcv_buffer[buffer_hash]["received_parts"]:
+            self._rcv_buffer[buffer_hash]["data"].extend(data[1:])
+            self._rcv_buffer[buffer_hash]["received_parts"].append(sequence_number)
 
         # message is complete with sending an acknowledge
         if (
